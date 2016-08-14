@@ -29,13 +29,16 @@ void copyMatrix(const cv::Mat& cvMat, T* matlabPtr)
 
 	std::size_t sizeCols = cvMat.cols;
 	std::size_t sizeRows = cvMat.rows;
-	
+
 	for(std::size_t i = 0; i < sizeRows; ++i)
 	{
+		T* matlabLine = matlabPtr + i;
 		const T* ptr = cvMat.ptr<T>(i);
 		for(std::size_t j = 0; j < sizeCols; ++j)
 		{
-			*(matlabPtr + j*sizeRows + i) = *ptr;
+		//	*(matlabPtr + j*sizeRows + i) = *ptr;
+			*matlabLine = *ptr;
+			matlabLine += sizeRows;
 			++ptr;
 		}
 	}
@@ -117,16 +120,32 @@ void mexFunction(
 			throw "MarkerManager::loadImage: study->size() == 0";
 		OctData::Series* series = study->begin()->second;
 
-		const OctData::BScan* bscan = series->getBScan(0);
-		const cv::Mat& bscanCvMat = bscan->getImage();
+		const char* octFieldnames[] = {"SLO", "Serie"}; //, "Meta"};
 
+		mxArray* octMatlabStruct = mxCreateStructMatrix(1, 1, sizeof(octFieldnames)/sizeof(octFieldnames[0]), octFieldnames);
+
+		// SLO
 		const OctData::SloImage& sloImg = series->getSloImage();
 		const cv::Mat& sloCvMat = sloImg.getImage();
 
 		mxArray* sloMatlab = nullptr;
-		createCopyMatrix<uint8_t>(bscanCvMat, sloMatlab);
+		createCopyMatrix<uint8_t>(sloCvMat, sloMatlab);
 
-		plhs[0] = sloMatlab;
+
+
+		// const OctData::Series::BScanList& bscans = series->getBScans();
+
+		// BScan
+		const OctData::BScan* bscan = series->getBScan(0);
+		const cv::Mat& bscanCvMat = bscan->getImage();
+
+		mxArray* bscanMatlab = nullptr;
+		createCopyMatrix<uint8_t>(bscanCvMat, bscanMatlab);
+
+		mxSetFieldByNumber(octMatlabStruct, 0, 0, sloMatlab);
+		mxSetFieldByNumber(octMatlabStruct, 0, 1, bscanMatlab);
+
+		plhs[0] = octMatlabStruct;
 
 
 
