@@ -10,16 +10,12 @@
 #include <octdata/datastruct/sloimage.h>
 #include <octdata/datastruct/bscan.h>
 
+#include <limits>
+
 #include <opencv/cv.h>
 
-template<typename T>
-void createMatlabMatrix(mxArray*& mat, std::size_t rows, std::size_t cols);
+#include "matlab_types.h"
 
-template<>
-void createMatlabMatrix<uint8_t>(mxArray*& mat, std::size_t rows, std::size_t cols)
-{
-	mat = mxCreateNumericMatrix(rows, cols, mxUINT8_CLASS, mxREAL);
-}
 
 template<typename T>
 void copyMatrix(const cv::Mat& cvMat, T* matlabPtr)
@@ -30,6 +26,7 @@ void copyMatrix(const cv::Mat& cvMat, T* matlabPtr)
 	std::size_t sizeCols = cvMat.cols;
 	std::size_t sizeRows = cvMat.rows;
 
+	// copy transpose matrix because opencv's structure is row based and matlab's structure is col based
 	for(std::size_t i = 0; i < sizeRows; ++i)
 	{
 		T* matlabLine = matlabPtr + i;
@@ -52,28 +49,72 @@ void createCopyMatrix(const cv::Mat& cvMat, mxArray*& matlabMat)
 
 	std::size_t sizeCols = cvMat.cols;
 	std::size_t sizeRows = cvMat.rows;
-	createMatlabMatrix<T>(matlabMat, sizeRows, sizeCols);
+	matlabMat = mxCreateNumericMatrix(sizeRows, sizeCols, MatlabType<T>::classID, mxREAL);
 
 	if(!matlabMat)
 		return;
 
 	T* matlabPtr = reinterpret_cast<T*>(mxGetPr(matlabMat));
-/*
-	memcpy(matlabPtr, cvMat.data, sizeCols*sizeRows);
+	copyMatrix<T>(cvMat, matlabPtr);
+}
 
-	*/
+template<typename T>
+mxArray* createCopyMatrix(const cv::Mat& cvMat)
+{
+	mxArray* matlabMat = nullptr;
+	createCopyMatrix<T>(cvMat, matlabMat);
+	return matlabMat;
+}
 
+template<typename T>
+void createMatlabVector(const std::vector<T>& vec, mxArray*& matlabMat)
+{
+	if(matlabMat)
+		return;
 
-	for(std::size_t i = 0; i < sizeRows; ++i)
+	std::size_t size = vec.size();
+	matlabMat = mxCreateNumericMatrix(size, 1, MatlabType<T>::classID, mxREAL);
+
+	if(!matlabMat)
+		return;
+
+	T* matlabPtr = reinterpret_cast<T*>(mxGetPr(matlabMat));
+	for(T value : vec)
 	{
-		const T* ptr = cvMat.ptr<T>(i);
-		for(std::size_t j = 0; j < sizeCols; ++j)
-		{
-			*(matlabPtr + j*sizeRows + i) = *ptr;
-			++ptr;
-		}
+		*matlabPtr = value;
+		++matlabPtr;
 	}
 }
+
+template<typename T>
+void createMatlabArray(const T* vec, mxArray*& matlabMat, std::size_t size)
+{
+	if(matlabMat)
+		return;
+
+	matlabMat = mxCreateNumericMatrix(size, 1, MatlabType<T>::classID, mxREAL);
+
+	if(!matlabMat)
+		return;
+
+	T* matlabPtr = reinterpret_cast<T*>(mxGetPr(matlabMat));
+	const T* vecEnd = vec + size;
+	while(vec != vecEnd)
+	{
+		*matlabPtr = *vec;
+		++matlabPtr;
+		++vec;
+	}
+}
+
+template<typename T>
+mxArray* createMatlabArray(const T* vec, std::size_t size)
+{
+	mxArray* matlabMat = nullptr;
+	createMatlabArray<T>(vec, matlabMat, size);
+	return matlabMat;
+}
+
 
 
 void mexFunction(
@@ -93,21 +134,13 @@ void mexFunction(
 				"MEXCPP requires no output argument.");
 	}
 
-	std::cout << "isChar: " << mxIsChar(prhs[0]) << '\n';
-	std::cout << "mxGetM(): " << mxGetM(prhs[0]) << '\n';
-	std::cout << "mxGetN(): " << mxGetN(prhs[0]) << '\n';
-
-
 	if(mxIsChar(prhs[0]))
 	{
 		mxChar* fnPtr = (mxChar*) mxGetPr(prhs[0]);
 		std::size_t fnLength = mxGetN(prhs[0]);
 		std::string filename(fnPtr, fnPtr+fnLength);
 
-		std::cout << "filename: " << filename << '\n';
-
 		OctData::OCT oct = OctData::OctFileRead::openFile(filename);
-
 
 		// TODO: bessere Datenverwertung / Fehlerbehandlung
 		if(oct.size() == 0)
@@ -124,30 +157,68 @@ void mexFunction(
 
 		mxArray* octMatlabStruct = mxCreateStructMatrix(1, 1, sizeof(octFieldnames)/sizeof(octFieldnames[0]), octFieldnames);
 
+		//-------
 		// SLO
+		//-------
+		const char* sloFieldnames[] = {"Rows", "Columns", "img"}; //, "PixelSpacing"};
+		mxArray* octSloMatlabStruct = mxCreateStructMatrix(1, 1, sizeof(sloFieldnames)/sizeof(sloFieldnames[0]), sloFieldnames);
+
 		const OctData::SloImage& sloImg = series->getSloImage();
 		const cv::Mat& sloCvMat = sloImg.getImage();
+		std::size_t sloRows = sloCvMat.rows;
+		std::size_t sloCols = sloCvMat.cols;
 
-		mxArray* sloMatlab = nullptr;
-		createCopyMatrix<uint8_t>(sloCvMat, sloMatlab);
+		mxSetFieldByNumber(octSloMatlabStruct, 0, 0, createMatlabArray<std::size_t>(&sloRows, 1));
+		mxSetFieldByNumber(octSloMatlabStruct, 0, 1, createMatlabArray<std::size_t>(&sloCols, 1));
+		mxSetFieldByNumber(octSloMatlabStruct, 0, 2, createCopyMatrix<uint8_t>(sloCvMat));
+		//
 
-
-
-		// const OctData::Series::BScanList& bscans = series->getBScans();
-
+		//-------
 		// BScan
-		const OctData::BScan* bscan = series->getBScan(0);
-		const cv::Mat& bscanCvMat = bscan->getImage();
+		//-------
+		const char* serieFieldnames[] = {"Rows", "Columns", "NumberOfFrames", "bscans"}; //, "PixelSpacing"};
+		mxArray* octSerieMatlabStruct = mxCreateStructMatrix(1, 1, sizeof(serieFieldnames)/sizeof(serieFieldnames[0]), serieFieldnames);
 
-		mxArray* bscanMatlab = nullptr;
-		createCopyMatrix<uint8_t>(bscanCvMat, bscanMatlab);
+		// general data
+		const OctData::Series::BScanList& bscans = series->getBScans();
+		cv::Mat firstBscan = bscans.at(0)->getImage();
+		std::size_t rows = firstBscan.rows;
+		std::size_t cols = firstBscan.cols;
+		std::size_t nrBscans = bscans.size();
 
-		mxSetFieldByNumber(octMatlabStruct, 0, 0, sloMatlab);
-		mxSetFieldByNumber(octMatlabStruct, 0, 1, bscanMatlab);
+		// fill basic elements
+		mxSetFieldByNumber(octSerieMatlabStruct, 0, 0, createMatlabArray<std::size_t>(&rows, 1));
+		mxSetFieldByNumber(octSerieMatlabStruct, 0, 1, createMatlabArray<std::size_t>(&cols, 1));
+		mxSetFieldByNumber(octSerieMatlabStruct, 0, 2, createMatlabArray<std::size_t>(&nrBscans, 1));
+
+		// get images
+		const size_t dims[] = {rows, cols, nrBscans};
+		const size_t dimNum = sizeof(dims)/sizeof(dims[0]);
+		mxArray* bscanArray = mxCreateNumericArray(dimNum, dims, mxUINT8_CLASS, mxREAL);
+
+		// convert cvMats to MatlabArray
+		uint8_t* matlabPtr = reinterpret_cast<uint8_t*>(mxGetPr(bscanArray));
+		for(const OctData::BScan* bscan : bscans)
+		{
+			copyMatrix<uint8_t>(bscan->getImage(), matlabPtr);
+			matlabPtr += firstBscan.rows * firstBscan.cols;
+		}
+
+		// fill Serie struct
+		mxSetFieldByNumber(octSerieMatlabStruct, 0, 3, bscanArray);
+		// mxSetFieldByNumber(octSerieMatlabStruct, 0, 4, bscanMatlab);
+
+
+		//
+		// fill OCT structure
+		//
+		mxSetFieldByNumber(octMatlabStruct, 0, 0, octSloMatlabStruct);
+		mxSetFieldByNumber(octMatlabStruct, 0, 1, octSerieMatlabStruct);
 
 		plhs[0] = octMatlabStruct;
 
 
+//
 
 	}
 	else
