@@ -15,9 +15,10 @@ endif()
 
 include_directories(${LibOctData_INCLUDE_DIRS})
 
-include_directories(${MATLAB_INCLUDE_DIR})
+include_directories(${Matlab_INCLUDE_DIRS})
 
-message(${MATLAB_INCLUDE_DIR})
+message(${Matlab_INCLUDE_DIRS})
+message(${Matlab_LIBRARIES})
 
 matlab_add_mex(NAME octdata2matlab SRC main.cpp) # nicht verfügbar unter Cmake3.0
 # add_executable(octdata2matlab main.cpp)
@@ -26,5 +27,5 @@ matlab_add_mex(NAME octdata2matlab SRC main.cpp) # nicht verfügbar unter Cmake3
 
 # install(TARGETS octdata2matlab RUNTIME DESTINATION bin)
 
-target_link_libraries(octdata2matlab ${LibOctData_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(octdata2matlab ${LibOctData_LIBRARIES} ${OpenCV_LIBRARIES} ${Matlab_LIBRARIES})
 

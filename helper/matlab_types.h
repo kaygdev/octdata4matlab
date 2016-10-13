@@ -6,7 +6,11 @@
 template<typename T>
 struct MatlabType {};
 
-
+template<>
+struct MatlabType<bool>
+{
+	constexpr static const mxClassID classID = mxLOGICAL_CLASS;
+};
 
 template<>
 struct MatlabType<int8_t>
