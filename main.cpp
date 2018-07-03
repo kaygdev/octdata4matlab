@@ -20,14 +20,10 @@
 #include "helper/opencv_helper.h"
 
 
-
-
-void mexFunction(
-		 int          nlhs,
-		 mxArray      *plhs[],
-		 int          nrhs,
-		 const mxArray *prhs[]
-		 )
+void mexFunction(int            nlhs
+               , mxArray*       plhs[]
+               , int            nrhs
+               , const mxArray* prhs[])
 	{
 	/* Check for proper number of arguments */
 
@@ -137,13 +133,13 @@ void mexFunction(
 	typedef double SegDataType;
 	const char* SegmentationFieldnames[] = {"ILM", "BM"}; //, "PixelSpacing"};
 	mxArray* octSerieSegmentationMatlabStruct = mxCreateStructMatrix(1, 1, sizeof(SegmentationFieldnames)/sizeof(SegmentationFieldnames[0]), SegmentationFieldnames);
-	mxArray* octSegILM = mxCreateNumericMatrix(nrBscans, cols, MatlabType<SegDataType>::classID, mxREAL);
-	mxArray* octSegBM  = mxCreateNumericMatrix(nrBscans, cols, MatlabType<SegDataType>::classID, mxREAL);
+	mxArray* octSegILM = mxCreateNumericMatrix(cols, nrBscans, MatlabType<SegDataType>::classID, mxREAL);
+	mxArray* octSegBM  = mxCreateNumericMatrix(cols, nrBscans, MatlabType<SegDataType>::classID, mxREAL);
 	std::size_t actBscan = 0;
 	for(const OctData::BScan* bscan : bscans)
 	{
-		copyVec2MatlabRow(bscan->getSegmentLine(OctData::BScan::SegmentlineType::ILM), actBscan, octSegILM);
-		copyVec2MatlabRow(bscan->getSegmentLine(OctData::BScan::SegmentlineType::BM ), actBscan, octSegBM );
+		copyVec2MatlabCol(bscan->getSegmentLine(OctData::Segmentationlines::SegmentlineType::ILM), actBscan, octSegILM);
+		copyVec2MatlabCol(bscan->getSegmentLine(OctData::Segmentationlines::SegmentlineType::BM ), actBscan, octSegBM );
 		++actBscan;
 	}
 	mxSetFieldByNumber(octSerieSegmentationMatlabStruct, 0, 0, octSegILM);
