@@ -46,8 +46,9 @@ void createCopyMatrix(const cv::Mat& cvMat, mxArray*& matlabMat)
 	copyMatrix<T>(cvMat, matlabPtr);
 }
 
+
 template<typename T>
-mxArray* createCopyMatrix(const cv::Mat& cvMat)
+mxArray* convertMatrix(const cv::Mat& cvMat)
 {
 	mxArray* matlabMat = nullptr;
 	createCopyMatrix<T>(cvMat, matlabMat);

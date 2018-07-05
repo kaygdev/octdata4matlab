@@ -20,19 +20,22 @@
 #include "helper/opencv_helper.h"
 
 
+#include"readoctdata.cpp"
+
+
+
 void mexFunction(int            nlhs
                , mxArray*       plhs[]
                , int            nrhs
                , const mxArray* prhs[])
 	{
 	/* Check for proper number of arguments */
-
-	if(nrhs != 1 && nrhs != 2)
+	if(nrhs > 2 || nrhs < 1)
 	{
 		mexErrMsgIdAndTxt("MATLAB:mexcpp:nargin", "MEXCPP requires 1 or 2 input arguments (filename, options[struct])");
 		return;
 	}
-	else if (nlhs != 1)
+	else if(nlhs > 1)
 	{
 		mexErrMsgIdAndTxt("MATLAB:mexcpp:nargout", "MEXCPP requires only one output argument.");
 		return;
@@ -46,23 +49,22 @@ void mexFunction(int            nlhs
 	}
 
 
-
-	// Filename
-	mxChar* fnPtr = (mxChar*) mxGetPr(prhs[0]);
-	std::size_t fnLength = mxGetN(prhs[0]);
-	std::string filename(fnPtr, fnPtr+fnLength);
-
-	// Load Options
-	OctData::FileReadOptions options;
+	const mxArray* mxOptions = nullptr;
 	if(nrhs == 2)
-	{
-		const mxArray* const mxOptions = prhs[1];
-		options.fillEmptyPixelWhite = getConfigFromStruct(mxOptions, "fillEmptyPixelWhite", options.fillEmptyPixelWhite);
-		options.registerBScanns     = getConfigFromStruct(mxOptions, "registerBScanns",     options.registerBScanns    );
-		options.rotateSlo           = getConfigFromStruct(mxOptions, "rotateSlo",           options.rotateSlo          );
-	}
+		mxOptions = prhs[1];
 
+
+	std::string filename = getScalarConvert<std::string>(prhs[0]);
+	mexPrintf("open: %s\n", filename.c_str());
+	plhs[0] = readOctData(mxOptions, filename);
+
+	return;
+
+#if false
 	OctData::OCT oct = OctData::OctFileRead::openFile(filename, options);
+
+
+
 
 	// TODO: bessere Datenverwertung / Fehlerbehandlung
 	if(oct.size() == 0)
@@ -162,4 +164,7 @@ void mexFunction(int            nlhs
 
 	
 	return;
+
+
+#endif
 }

@@ -13,6 +13,12 @@ struct MatlabType<bool>
 };
 
 template<>
+struct MatlabType<char>
+{
+	constexpr static const mxClassID classID = mxCHAR_CLASS;
+};
+
+template<>
 struct MatlabType<int8_t>
 {
 	constexpr static const mxClassID classID = mxINT8_CLASS;
