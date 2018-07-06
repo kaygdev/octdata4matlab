@@ -12,7 +12,7 @@ find_package(Octave COMPONENTS MX_LIBRARY)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
 	set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wunreachable-code -Wconversion")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++")
+# 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++")
 endif()
 
 include_directories(${LibOctData_INCLUDE_DIRS})
@@ -29,9 +29,12 @@ if(Matlab_FOUND)
 endif()
 
 if(OCTAVE_LIBRARIES)
-	octave_add_oct(readoctdata  SOURCES readoctdata.cpp  LINK_LIBRARIES ${LibOctData_LIBRARIES} ${OpenCV_LIBRARIES} EXTENSION mex)
-	octave_add_oct(writeoctdata SOURCES writeoctdata.cpp LINK_LIBRARIES ${LibOctData_LIBRARIES} ${OpenCV_LIBRARIES} EXTENSION mex)
+	octave_add_oct(readoctdata_octave  SOURCES readoctdata.cpp  LINK_LIBRARIES ${LibOctData_LIBRARIES} ${OpenCV_LIBRARIES} EXTENSION mex)
+	octave_add_oct(writeoctdata_octave SOURCES writeoctdata.cpp LINK_LIBRARIES ${LibOctData_LIBRARIES} ${OpenCV_LIBRARIES} EXTENSION mex)
 
-	target_include_directories(readoctdata  SYSTEM PRIVATE ${OCTAVE_INCLUDE_DIRS} PUBLIC ${CMAKE_SOURCE_DIR}/src/)
-	target_include_directories(writeoctdata SYSTEM PRIVATE ${OCTAVE_INCLUDE_DIRS} PUBLIC ${CMAKE_SOURCE_DIR}/src/)
+	target_include_directories(readoctdata_octave  SYSTEM PRIVATE ${OCTAVE_INCLUDE_DIRS} PUBLIC ${CMAKE_SOURCE_DIR}/src/)
+	target_include_directories(writeoctdata_octave SYSTEM PRIVATE ${OCTAVE_INCLUDE_DIRS} PUBLIC ${CMAKE_SOURCE_DIR}/src/)
+
+	set_target_properties(readoctdata_octave  PROPERTIES OUTPUT_NAME "readoctdata" )
+	set_target_properties(writeoctdata_octave PROPERTIES OUTPUT_NAME "writeoctdata")
 endif()

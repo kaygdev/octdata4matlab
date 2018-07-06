@@ -33,6 +33,81 @@ namespace
 		}
 	}
 
+	// general convert methods
+	cv::Mat convertImage(const mxArray* matlabStruct, const char* imageStr)
+	{
+		const mxArray* imageNode = mxGetField(matlabStruct, 0, imageStr);
+		return convertMatrix<uint8_t>(imageNode);
+	}
+
+
+	OctData::SloImage* readSlo(const mxArray* sloNode)
+	{
+		cv::Mat sloImage = convertImage(sloNode, "image");
+		if(sloImage.empty())
+			return nullptr;
+
+		OctData::SloImage* slo = new OctData::SloImage();
+		slo->setImage(sloImage);
+		readDataNode(sloNode, *slo);
+		return slo;
+	}
+
+	void readSegmentation(const mxArray* segNode, OctData::Segmentationlines& seglines)
+	{
+		ParameterFromOptions get(segNode);
+		for(OctData::Segmentationlines::SegmentlineType type : OctData::Segmentationlines::getSegmentlineTypes())
+		{
+			OctData::Segmentationlines::Segmentline& seg = seglines.getSegmentLine(type);
+			get(OctData::Segmentationlines::getSegmentlineName(type), seg);
+		}
+	}
+
+	OctData::BScan* readBScan(const mxArray* bscanNode)
+	{
+		cv::Mat bscanImg = convertImage(bscanNode, "image");
+		if(bscanImg.empty())
+			return nullptr;
+
+		cv::Mat imageAngio = convertImage(bscanNode, "angioImage");
+
+		OctData::BScan::Data bscanData;
+
+
+		const mxArray* segNode = mxGetField(bscanNode, 0, "segmentation");
+		if(segNode)
+			readSegmentation(segNode, bscanData.segmentationslines);
+
+		OctData::BScan* bscan = new OctData::BScan(bscanImg, bscanData);
+
+		if(!imageAngio.empty())
+			bscan->setAngioImage(imageAngio);
+
+		readDataNode(bscanNode, *bscan);
+		return bscan;
+	}
+
+
+	bool readBScanList(const mxArray* seriesNode, OctData::Series& series)
+	{
+		const mxArray* bscansNode = mxGetField(seriesNode, 0, "bscans");
+		if(!bscansNode || !mxIsCell(bscansNode))
+			return false;
+
+		const mwSize* numSubStruct = mxGetDimensions(bscansNode);
+		const mwSize numBScans = numSubStruct[0] * numSubStruct[1];
+
+		for(mwSize i = 0; i < numBScans; ++i)
+		{
+		    const mxArray* bscanNode = mxGetCell(bscansNode, i);
+
+			OctData::BScan* bscan = readBScan(bscanNode);
+			if(bscan)
+				series.takeBScan(bscan);
+		}
+
+		return true;
+	}
 
 	template<typename S>
 	bool readStructure(const mxArray* matlabStruct, S& structure)
@@ -71,59 +146,14 @@ namespace
 	{
 		readDataNode(matlabStruct, series);
 
-		return true;
 
-// 		boost::optional<const bpt::ptree&> sloNode = tree.get_child_optional("slo");
-// 		if(sloNode)
-// 			series.takeSloImage(readSlo(*sloNode, zipfile));
-//
-// 		if(op.readBScans)
-// 			return readBScanList(tree, zipfile, series, callback);
-// 		else
-// 			return true;
-	}
-	/*
-	template<typename S>
-	mxArray* convertStructure(const mxArray* matlabStruct, S& structure)
-	{
-		matlabStruct(matlabStruct, structure);
+		const mxArray* sloNode = mxGetField(matlabStruct, 0, "slo");
+		if(sloNode)
+			series.takeSloImage(readSlo(sloNode));
 
-		std::string structureName = getSubStructureName<S>();
-
-		for(typename S::SubstructurePair const& subStructPair : structure)
-		{
-			mxArray* subStruct = convertStructure(*subStructPair.second);
-			std::string subStructName = structureName + '_' + boost::lexical_cast<std::string>(subStructPair.first);
-			pto.addMxArray(subStructName, subStruct);
-
-			mxArray* mxOpt = mxGetField(matlabStruct, 0, subStructName.c_str());
-			if(mxOpt)
-				return getScalarConvert<T>(mxOpt);
-		}
-		return pto.getMxOptions();
+		return readBScanList(matlabStruct, series);
 	}
 
-
-	template<>
-	mxArray* convertStructure<OctData::Series>(const OctData::Series& series)
-	{
-		ParameterToOptions pto;
-		pto.addMxArray("data", writeParameter(series));
-
-		pto.addMxArray("slo", convertSlo(series.getSloImage()));
-
-		const OctData::Series::BScanList& bscans = series.getBScans();
-
-		const uint32_t dirLength = static_cast<uint32_t>(bscans.size());
-		mxArray* mxarr = mxCreateCellMatrix(1, dirLength);
-		for(uint32_t i = 0; i < dirLength; ++i)
-			mxSetCell(mxarr, i, convertBScan(bscans[i]));
-
-		pto.addMxArray("bscans", mxarr);
-
-		return pto.getMxOptions();
-	}
-	*/
 }
 
 

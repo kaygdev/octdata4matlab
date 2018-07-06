@@ -46,7 +46,7 @@ namespace
 	{
 		ParameterToOptions pto;
 		pto.addMxArray("data", writeParameter(slo));
-		pto.addMxArray("img", convertMatrix<uint8_t>(slo.getImage()));
+		pto.addMxArray("image", convertMatrix<uint8_t>(slo.getImage()));
 
 		return pto.getMxOptions();
 	}
@@ -76,7 +76,7 @@ namespace
 		if(!bscan->getImage().empty())
 			pto.addMxArray("image", convertMatrix<uint8_t>(bscan->getImage()));
 		if(!bscan->getAngioImage().empty())
-			pto.addMxArray("image", convertMatrix<uint8_t>(bscan->getAngioImage()));
+			pto.addMxArray("imageAngio", convertMatrix<uint8_t>(bscan->getAngioImage()));
 
 		pto.addMxArray("segmentation", convertSegmentation(bscan->getSegmentLines()));
 
