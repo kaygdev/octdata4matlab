@@ -55,7 +55,7 @@ void createCopyMatrix(const cv::Mat& cvMat, mxArray*& matlabMat)
 		matlabMat = mxCreateNumericMatrix(sizeRows, sizeCols, MatlabType<T>::classID, mxREAL);
 	else
 	{
-		std::size_t dimsArray[] = {sizeRows, sizeCols, channels};
+		mwSize dimsArray[] = {sizeRows, sizeCols, channels};
 		matlabMat = mxCreateNumericArray(3, dimsArray, MatlabType<T>::classID, mxREAL);
 	}
 

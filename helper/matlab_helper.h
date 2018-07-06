@@ -10,6 +10,11 @@
 #include <tuple>
 
 
+
+#include <boost/type_index.hpp>
+
+
+
 template<typename T>
 void transposeMatlabMatrix(mxArray* matlabMat)
 {
@@ -200,15 +205,15 @@ inline std::tuple<mwSize, mwSize> getMatrixSize(const mxArray* matlabMat)
 }
 
 
-template<typename T, typename MatType>
+template<typename MatType, typename T>
 void convertValue(T& ref, const mxArray* const matlabMat, const std::size_t eleNr = 0)
 {
 	void* dataPtr = mxGetData(matlabMat);
 	ref = static_cast<T>(*(reinterpret_cast<const MatType*>(dataPtr)+eleNr));
 }
 
-template<typename T, typename MatType>
-void convertValue(std::vector<T>& ref, const mxArray* const matlabMat, const std::size_t eleNr = 0)
+template<typename MatType, typename T>
+void convertValue(std::vector<T>& ref, const mxArray* const matlabMat, const std::size_t /*eleNr*/ = 0)
 {
 	void* dataPtr = mxGetData(matlabMat);
 	const std::size_t size = mxGetM(matlabMat)*mxGetN(matlabMat);
@@ -216,7 +221,7 @@ void convertValue(std::vector<T>& ref, const mxArray* const matlabMat, const std
 	const MatType* in = reinterpret_cast<const MatType*>(dataPtr);
 
 	for(std::size_t i = 0; i < size; ++i)
-		ref[i] = static_cast<T>(in[eleNr]);
+		ref[i] = static_cast<T>(in[i]);
 }
 
 
@@ -226,11 +231,10 @@ T getValueConvert(const mxArray* const matlabMat, const std::size_t eleNr = 0)
 	if(!matlabMat)
 		return T();
 
-// 	void* dataPtr = mxGetData(matlabMat);
 	switch(mxGetClassID(matlabMat))
 	{
 // #define HANDLE_TYPE(TYPE) case MatlabType<TYPE>::classID: return static_cast<T>(*(reinterpret_cast<const TYPE*>(dataPtr)+eleNr));
-#define HANDLE_TYPE(TYPE) case MatlabType<TYPE>::classID: { T result; convertValue<T, TYPE>(matlabMat, eleNr); return result; };
+#define HANDLE_TYPE(TYPE) case MatlabType<TYPE>::classID: { T result; convertValue<TYPE>(result, matlabMat, eleNr); return result; };
 		HANDLE_TYPE(double);
 		HANDLE_TYPE(float);
 		HANDLE_TYPE(bool);
@@ -253,29 +257,7 @@ T getValueConvert(const mxArray* const matlabMat, const std::size_t eleNr = 0)
 template<typename T>
 T getScalarConvert(const mxArray* matlabMat)
 {
-	if(!matlabMat)
-		return T();
-
-	switch(mxGetClassID(matlabMat))
-	{
-#define HANDLE_TYPE(TYPE) case MatlabType<TYPE>::classID: return static_cast<T>(*(reinterpret_cast<TYPE*>(mxGetPr(matlabMat))));
-		HANDLE_TYPE(double);
-		HANDLE_TYPE(float);
-		HANDLE_TYPE(bool);
-		HANDLE_TYPE(uint8_t);
-		HANDLE_TYPE(uint16_t);
-		HANDLE_TYPE(uint32_t);
-		HANDLE_TYPE(uint64_t);
-		HANDLE_TYPE( int8_t);
-		HANDLE_TYPE( int16_t);
-		HANDLE_TYPE( int32_t);
-		HANDLE_TYPE( int64_t);
-#undef HANDLE_TYPE
-		default:
-			mexPrintf("unhandled Type: %d", mxGetClassID(matlabMat));
-	}
-
-	return T();
+	return getValueConvert<T>(matlabMat, 0);
 }
 
 template<>
@@ -311,7 +293,7 @@ public:
 	ParameterFromOptions(const mxArray* mxOptions) : mxOptions(mxOptions) {}
 
 	template<typename T>
-	void operator()(const char* name, T& value) { std::cerr << name << " - " << mxOptions << '\n'; if(mxOptions) value = getConfigFromStruct(mxOptions, name, value); }
+	void operator()(const char* name, T& value) { if(mxOptions) value = getConfigFromStruct(mxOptions, name, value); }
 
 	ParameterFromOptions subSet(const std::string& name)
 	{
