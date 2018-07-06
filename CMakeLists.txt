@@ -9,7 +9,7 @@ find_package(Matlab REQUIRED)
 find_package(OpenCV REQUIRED)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-	set(compiler_flags_debug "-Wall -Wextra -Wunreachable-code")
+	set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wunreachable-code -Wconversion")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++")
 endif()
 
@@ -19,7 +19,8 @@ include_directories(${Matlab_INCLUDE_DIRS})
 message(${Matlab_INCLUDE_DIRS})
 message(${Matlab_LIBRARIES})
 
-matlab_add_mex(NAME octdata2matlab SRC main.cpp LINK_TO ${LibOctData_LIBRARIES})
+matlab_add_mex(NAME readoctdata  SRC readoctdata.cpp  LINK_TO ${LibOctData_LIBRARIES} ${OpenCV_LIBRARIES})
+matlab_add_mex(NAME writeoctdata SRC writeoctdata.cpp LINK_TO ${LibOctData_LIBRARIES} ${OpenCV_LIBRARIES})
 
-target_link_libraries(octdata2matlab ${LibOctData_LIBRARIES} ${OpenCV_LIBRARIES} ${Matlab_LIBRARIES})
+# target_link_libraries(readoctdata ${LibOctData_LIBRARIES} ${OpenCV_LIBRARIES} ${Matlab_LIBRARIES})
 

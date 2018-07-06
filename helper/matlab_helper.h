@@ -199,16 +199,38 @@ inline std::tuple<mwSize, mwSize> getMatrixSize(const mxArray* matlabMat)
 	return std::make_tuple(mxGetN(matlabMat), mxGetM(matlabMat));
 }
 
+
+template<typename T, typename MatType>
+void convertValue(T& ref, const mxArray* const matlabMat, const std::size_t eleNr = 0)
+{
+	void* dataPtr = mxGetData(matlabMat);
+	ref = static_cast<T>(*(reinterpret_cast<const MatType*>(dataPtr)+eleNr));
+}
+
+template<typename T, typename MatType>
+void convertValue(std::vector<T>& ref, const mxArray* const matlabMat, const std::size_t eleNr = 0)
+{
+	void* dataPtr = mxGetData(matlabMat);
+	const std::size_t size = mxGetM(matlabMat)*mxGetN(matlabMat);
+	ref.resize(size);
+	const MatType* in = reinterpret_cast<const MatType*>(dataPtr);
+
+	for(std::size_t i = 0; i < size; ++i)
+		ref[i] = static_cast<T>(in[eleNr]);
+}
+
+
 template<typename T>
 T getValueConvert(const mxArray* const matlabMat, const std::size_t eleNr = 0)
 {
 	if(!matlabMat)
 		return T();
 
-	void* dataPtr = mxGetData(matlabMat);
+// 	void* dataPtr = mxGetData(matlabMat);
 	switch(mxGetClassID(matlabMat))
 	{
-#define HANDLE_TYPE(TYPE) case MatlabType<TYPE>::classID: return static_cast<T>(*(reinterpret_cast<const TYPE*>(dataPtr)+eleNr));
+// #define HANDLE_TYPE(TYPE) case MatlabType<TYPE>::classID: return static_cast<T>(*(reinterpret_cast<const TYPE*>(dataPtr)+eleNr));
+#define HANDLE_TYPE(TYPE) case MatlabType<TYPE>::classID: { T result; convertValue<T, TYPE>(matlabMat, eleNr); return result; };
 		HANDLE_TYPE(double);
 		HANDLE_TYPE(float);
 		HANDLE_TYPE(bool);
@@ -287,8 +309,16 @@ class ParameterFromOptions
 	const mxArray* mxOptions;
 public:
 	ParameterFromOptions(const mxArray* mxOptions) : mxOptions(mxOptions) {}
+
 	template<typename T>
-	void operator()(const char* name, T& value) { value = getConfigFromStruct(mxOptions, name, value); }
+	void operator()(const char* name, T& value) { std::cerr << name << " - " << mxOptions << '\n'; if(mxOptions) value = getConfigFromStruct(mxOptions, name, value); }
+
+	ParameterFromOptions subSet(const std::string& name)
+	{
+		if(mxOptions)
+			return ParameterFromOptions(mxGetField(mxOptions, 0, name.c_str()));
+		return ParameterFromOptions(nullptr);
+	}
 };
 
 
