@@ -2,6 +2,7 @@
 #include<boost/lexical_cast.hpp>
 
 #include <octdata/octfileread.h>
+#include <octdata/filewriteoptions.h>
 #include <octdata/datastruct/oct.h>
 #include <octdata/datastruct/sloimage.h>
 #include <octdata/datastruct/bscan.h>
@@ -159,12 +160,31 @@ namespace
 
 
 
-void writeOctData(const mxArray* mxOptions, const mxArray* data, const std::string& filename)
+mxArray* writeOctData(const mxArray* mxOptions, const mxArray* data, const std::string& filename)
 {
+	// Load Options
+	OctData::FileWriteOptions options;
+
+	if(mxOptions && mxIsStruct(mxOptions))
+	{
+		ParameterFromOptions paraFromOptions(mxOptions);
+		options.getSetParameter(paraFromOptions);
+	}
+
+	if(filename.empty())
+	{
+		ParameterToOptions paraToOptions;
+		options.getSetParameter(paraToOptions);
+		return paraToOptions.getMxOptions();
+	}
+
+
 	OctData::OCT oct;
 	readStructure(data, oct);
 
-	OctData::OctFileRead::writeFile(filename, oct);
+	OctData::OctFileRead::writeFile(filename, oct, options);
+
+	return nullptr;
 }
 
 
@@ -180,16 +200,17 @@ void mexFunction(int            nlhs
 		mexErrMsgIdAndTxt("MATLAB:mexcpp:nargin", "MEXCPP requires 2 or 3 input arguments (filename, data, options[struct])");
 		return;
 	}
-	else if(nlhs != 0)
-	{
-		mexErrMsgIdAndTxt("MATLAB:mexcpp:nargout", "MEXCPP requires only one output argument.");
-		return;
-	}
-
-
 	if(!mxIsChar(prhs[0]))
 	{
 		mexErrMsgIdAndTxt("MATLAB:mexcpp:nargin", "requires filename");
+		return;
+	}
+
+	std::string filename = getScalarConvert<std::string>(prhs[0]);
+
+	if(nlhs != 0 && !filename.empty())
+	{
+		mexErrMsgIdAndTxt("MATLAB:mexcpp:nargout", "MEXCPP requires only one output argument.");
 		return;
 	}
 
@@ -199,9 +220,7 @@ void mexFunction(int            nlhs
 		mxOptions = prhs[2];
 
 
-	std::string filename = getScalarConvert<std::string>(prhs[0]);
-	mexPrintf("open: %s\n", filename.c_str());
-	writeOctData(mxOptions, prhs[1], filename);
+	plhs[0] = writeOctData(mxOptions, prhs[1], filename);
 
 	return;
 }

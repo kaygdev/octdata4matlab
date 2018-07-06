@@ -86,10 +86,10 @@ namespace
 	template<typename S>
 	mxArray* convertStructure(const S& structure)
 	{
+		static const std::string structureName = getSubStructureName<S>();
+
 		ParameterToOptions pto;
 		pto.addMxArray("data", writeParameter(structure));
-
-		std::string structureName = getSubStructureName<S>();
 
 		for(typename S::SubstructurePair const& subStructPair : structure)
 		{
@@ -182,7 +182,6 @@ void mexFunction(int            nlhs
 
 
 	std::string filename = getScalarConvert<std::string>(prhs[0]);
-	mexPrintf("open: %s\n", filename.c_str());
 	plhs[0] = readOctData(mxOptions, filename);
 
 	return;
