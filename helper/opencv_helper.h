@@ -7,26 +7,38 @@
 
 
 template<typename T>
+void copyMatrixTranspose(const cv::Mat& cvMat, T* matlabPtr, std::size_t channel)
+{
+	const std::size_t sizeCols = cvMat.cols;
+	const std::size_t sizeRows = cvMat.rows;
+	const std::size_t channels = cvMat.channels();
+
+	for(std::size_t i = 0; i < sizeRows; ++i)
+	{
+		T* matlabLine = matlabPtr + i;
+		const T* ptr = cvMat.ptr<T>(i) + channel;
+		for(std::size_t j = 0; j < sizeCols; ++j)
+		{
+			*matlabLine = *ptr;
+			matlabLine += sizeRows;
+			ptr += channels;
+		}
+	}
+}
+
+template<typename T>
 void copyMatrix(const cv::Mat& cvMat, T* matlabPtr)
 {
 	if(!matlabPtr)
 		return;
 
-	std::size_t sizeCols = cvMat.cols;
-	std::size_t sizeRows = cvMat.rows;
+	const std::size_t sizeCols = cvMat.cols;
+	const std::size_t sizeRows = cvMat.rows;
+	const std::size_t channels = cvMat.channels();
 
 	// copy transpose matrix because opencv's structure is row based and matlab's structure is col based
-	for(std::size_t i = 0; i < sizeRows; ++i)
-	{
-		T* matlabLine = matlabPtr + i;
-		const T* ptr = cvMat.ptr<T>(i);
-		for(std::size_t j = 0; j < sizeCols; ++j)
-		{
-			*matlabLine = *ptr;
-			matlabLine += sizeRows;
-			++ptr;
-		}
-	}
+	for(std::size_t channel = 0; channel < channels; ++channel)
+		copyMatrixTranspose(cvMat, matlabPtr + channel*sizeCols*sizeRows, channel);
 }
 
 template<typename T>
@@ -35,9 +47,17 @@ void createCopyMatrix(const cv::Mat& cvMat, mxArray*& matlabMat)
 	if(matlabMat)
 		return;
 
-	std::size_t sizeCols = cvMat.cols;
-	std::size_t sizeRows = cvMat.rows;
-	matlabMat = mxCreateNumericMatrix(sizeRows, sizeCols, MatlabType<T>::classID, mxREAL);
+	const std::size_t sizeCols = cvMat.cols;
+	const std::size_t sizeRows = cvMat.rows;
+	const std::size_t channels = cvMat.channels();
+
+	if(channels == 1)
+		matlabMat = mxCreateNumericMatrix(sizeRows, sizeCols, MatlabType<T>::classID, mxREAL);
+	else
+	{
+		std::size_t dimsArray[] = {sizeRows, sizeCols, channels};
+		matlabMat = mxCreateNumericArray(3, dimsArray, MatlabType<T>::classID, mxREAL);
+	}
 
 	if(!matlabMat)
 		return;
