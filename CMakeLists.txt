@@ -6,6 +6,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake_module/)
 
 find_package(LibOctData REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(Boost 1.40 REQUIRED)
 
 find_package(Matlab)
 find_package(Octave COMPONENTS MX_LIBRARY)
@@ -15,6 +16,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 # 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++")
 endif()
 
+include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 include_directories(${LibOctData_INCLUDE_DIRS})
 
 # message(${Matlab_INCLUDE_DIRS})
