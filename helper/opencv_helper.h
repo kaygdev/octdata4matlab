@@ -9,15 +9,15 @@
 template<typename T>
 void copyMatrixTranspose(const cv::Mat& cvMat, T* matlabPtr, std::size_t channel)
 {
-	const std::size_t sizeCols = cvMat.cols;
-	const std::size_t sizeRows = cvMat.rows;
-	const std::size_t channels = cvMat.channels();
+	const int sizeCols = cvMat.cols;
+	const int sizeRows = cvMat.rows;
+	const int channels = cvMat.channels();
 
-	for(std::size_t i = 0; i < sizeRows; ++i)
+	for(int i = 0; i < sizeRows; ++i)
 	{
 		T* matlabLine = matlabPtr + i;
 		const T* ptr = cvMat.ptr<T>(i) + channel;
-		for(std::size_t j = 0; j < sizeCols; ++j)
+		for(int j = 0; j < sizeCols; ++j)
 		{
 			*matlabLine = *ptr;
 			matlabLine += sizeRows;
@@ -37,8 +37,17 @@ void copyMatrix(const cv::Mat& cvMat, T* matlabPtr)
 	const std::size_t channels = cvMat.channels();
 
 	// copy transpose matrix because opencv's structure is row based and matlab's structure is col based
-	for(std::size_t channel = 0; channel < channels; ++channel)
-		copyMatrixTranspose(cvMat, matlabPtr + channel*sizeCols*sizeRows, channel);
+	if(channels == 3) // convert opencv bgr to rgb
+	{
+		copyMatrixTranspose(cvMat, matlabPtr + 0*sizeCols*sizeRows, 2);
+		copyMatrixTranspose(cvMat, matlabPtr + 1*sizeCols*sizeRows, 1);
+		copyMatrixTranspose(cvMat, matlabPtr + 2*sizeCols*sizeRows, 0);
+	}
+	else
+	{
+		for(std::size_t channel = 0; channel < channels; ++channel)
+			copyMatrixTranspose(cvMat, matlabPtr + channel*sizeCols*sizeRows, channel);
+	}
 }
 
 template<typename T>
@@ -47,9 +56,9 @@ void createCopyMatrix(const cv::Mat& cvMat, mxArray*& matlabMat)
 	if(matlabMat)
 		return;
 
-	const std::size_t sizeCols = cvMat.cols;
-	const std::size_t sizeRows = cvMat.rows;
-	const std::size_t channels = cvMat.channels();
+	const mwSize sizeCols = static_cast<mwSize>(cvMat.cols      );
+	const mwSize sizeRows = static_cast<mwSize>(cvMat.rows      );
+	const mwSize channels = static_cast<mwSize>(cvMat.channels());
 
 	if(channels == 1)
 		matlabMat = mxCreateNumericMatrix(sizeRows, sizeCols, MatlabType<T>::classID, mxREAL);
@@ -79,15 +88,15 @@ mxArray* convertMatrix(const cv::Mat& cvMat)
 template<typename T>
 void copyMatrixTranspose(const T* matlabPtr, cv::Mat& cvMat, std::size_t channel)
 {
-	const std::size_t sizeCols = cvMat.cols;
-	const std::size_t sizeRows = cvMat.rows;
-	const std::size_t channels = cvMat.channels();
+	const int sizeCols = cvMat.cols;
+	const int sizeRows = cvMat.rows;
+	const int channels = cvMat.channels();
 
-	for(std::size_t i = 0; i < sizeRows; ++i)
+	for(int i = 0; i < sizeRows; ++i)
 	{
 		const T* matlabLine = matlabPtr + i;
 		T* ptr = cvMat.ptr<T>(i) + channel;
-		for(std::size_t j = 0; j < sizeCols; ++j)
+		for(int j = 0; j < sizeCols; ++j)
 		{
 			*ptr = *matlabLine;
 			matlabLine += sizeRows;
@@ -102,14 +111,29 @@ void copyMatrix(const mxArray* matlabMat, cv::Mat& cvMat)
 	if(!matlabMat)
 		return;
 
+	if(mxGetClassID(matlabMat) != MatlabType<T>::classID)
+	{
+		mexPrintf("copyMatrix: Wrong ClassID: %d != %d\n", mxGetClassID(matlabMat), MatlabType<T>::classID);
+		return;
+	}
+
 	const std::size_t sizeCols = cvMat.cols;
 	const std::size_t sizeRows = cvMat.rows;
 	const std::size_t channels = cvMat.channels();
 
 	const T* matlabPtr = reinterpret_cast<const T*>(mxGetPr(matlabMat));
 	// copy transpose matrix because opencv's structure is row based and matlab's structure is col based
-	for(std::size_t channel = 0; channel < channels; ++channel)
+	if(channels == 3) // convert opencv bgr to rgb
+	{
+		copyMatrixTranspose(matlabPtr + 0*sizeCols*sizeRows, cvMat, 2);
+		copyMatrixTranspose(matlabPtr + 1*sizeCols*sizeRows, cvMat, 1);
+		copyMatrixTranspose(matlabPtr + 2*sizeCols*sizeRows, cvMat, 0);
+	}
+	else
+	{
+		for(std::size_t channel = 0; channel < channels; ++channel)
 		copyMatrixTranspose(matlabPtr + channel*sizeCols*sizeRows, cvMat, channel);
+	}
 }
 
 
@@ -125,9 +149,9 @@ cv::Mat convertMatrix(const mxArray* matlabMat)
 	if(numDims != 2 && numDims != 3)
 		return cv::Mat(); // TODO error message
 
-	int channels = numDims==3?dims[2]:1;
+	int channels = numDims==3?static_cast<int>(dims[2]):1;
 
-	cv::Mat cvMat(dims[0], dims[1], CV_MAKETYPE(cv::DataType<uint8_t>::type, channels));
+	cv::Mat cvMat(static_cast<int>(dims[0]), static_cast<int>(dims[1]), CV_MAKETYPE(cv::DataType<uint8_t>::type, channels));
 	copyMatrix<T>(matlabMat, cvMat);
 	return cvMat;
 }

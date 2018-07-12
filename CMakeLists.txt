@@ -8,7 +8,7 @@ find_package(LibOctData REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Boost 1.40 REQUIRED)
 
-find_package(Matlab)
+find_package(Matlab COMPONENTS MX_LIBRARY)
 find_package(Octave COMPONENTS MX_LIBRARY)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
