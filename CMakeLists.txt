@@ -23,16 +23,16 @@ include_directories(${LibOctData_INCLUDE_DIRS})
 # message(${Matlab_LIBRARIES})
 
 if(Matlab_FOUND)
-	matlab_add_mex(NAME readoctdata  SRC readoctdata.cpp  LINK_TO ${LibOctData_LIBRARIES} ${OpenCV_LIBRARIES})
-	matlab_add_mex(NAME writeoctdata SRC writeoctdata.cpp LINK_TO ${LibOctData_LIBRARIES} ${OpenCV_LIBRARIES})
+	matlab_add_mex(NAME readoctdata  SRC readoctdata.cpp  LINK_TO ${OpenCV_LIBRARIES} LibOctData::octdata)
+	matlab_add_mex(NAME writeoctdata SRC writeoctdata.cpp LINK_TO ${OpenCV_LIBRARIES} LibOctData::octdata)
 
 	target_include_directories(readoctdata  SYSTEM PRIVATE ${Matlab_INCLUDE_DIRS} PUBLIC ${CMAKE_SOURCE_DIR}/src/)
 	target_include_directories(writeoctdata SYSTEM PRIVATE ${Matlab_INCLUDE_DIRS} PUBLIC ${CMAKE_SOURCE_DIR}/src/)
 endif()
 
 if(OCTAVE_LIBRARIES)
-	octave_add_oct(readoctdata_octave  SOURCES readoctdata.cpp  LINK_LIBRARIES ${LibOctData_LIBRARIES} ${OpenCV_LIBRARIES} EXTENSION mex)
-	octave_add_oct(writeoctdata_octave SOURCES writeoctdata.cpp LINK_LIBRARIES ${LibOctData_LIBRARIES} ${OpenCV_LIBRARIES} EXTENSION mex)
+	octave_add_oct(readoctdata_octave  SOURCES readoctdata.cpp  LINK_LIBRARIES ${OpenCV_LIBRARIES} LibOctData::octdata EXTENSION mex)
+	octave_add_oct(writeoctdata_octave SOURCES writeoctdata.cpp LINK_LIBRARIES ${OpenCV_LIBRARIES} LibOctData::octdata EXTENSION mex)
 
 	target_include_directories(readoctdata_octave  SYSTEM PRIVATE ${OCTAVE_INCLUDE_DIRS} PUBLIC ${CMAKE_SOURCE_DIR}/src/)
 	target_include_directories(writeoctdata_octave SYSTEM PRIVATE ${OCTAVE_INCLUDE_DIRS} PUBLIC ${CMAKE_SOURCE_DIR}/src/)
