@@ -23,7 +23,7 @@
 #include<boost/lexical_cast.hpp>
 #include<string>
 
-#include <opencv/cv.h>
+#include <opencv2/opencv.hpp>
 
 #include <octdata/octfileread.h>
 #include <octdata/filereadoptions.h>
@@ -81,7 +81,7 @@ namespace
 		return pto.getMxOptions();
 	}
 
-	mxArray* convertBScan(const OctData::BScan* bscan)
+	mxArray* convertBScan(const std::shared_ptr<const OctData::BScan>& bscan)
 	{
 		if(!bscan)
 			return nullptr;

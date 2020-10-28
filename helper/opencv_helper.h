@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <opencv/cv.h>
+#include <opencv2/opencv.hpp>
 
 #include "matlab_types.h"
 #include "mex.h"

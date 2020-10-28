@@ -59,13 +59,13 @@ namespace
 	}
 
 
-	OctData::SloImage* readSlo(const mxArray* sloNode)
+	std::unique_ptr<OctData::SloImage> readSlo(const mxArray* sloNode)
 	{
 		cv::Mat sloImage = convertImage(sloNode, "image");
 		if(sloImage.empty())
 			return nullptr;
 
-		OctData::SloImage* slo = new OctData::SloImage();
+		std::unique_ptr<OctData::SloImage> slo = std::make_unique<OctData::SloImage>();
 		slo->setImage(sloImage);
 		readDataNode(sloNode, *slo);
 		return slo;
@@ -81,7 +81,7 @@ namespace
 		}
 	}
 
-	OctData::BScan* readBScan(const mxArray* bscanNode)
+	std::shared_ptr<OctData::BScan> readBScan(const mxArray* bscanNode)
 	{
 		cv::Mat bscanImg = convertImage(bscanNode, "image");
 		if(bscanImg.empty())
@@ -96,7 +96,7 @@ namespace
 		if(segNode)
 			readSegmentation(segNode, bscanData.segmentationslines);
 
-		OctData::BScan* bscan = new OctData::BScan(bscanImg, bscanData);
+		std::shared_ptr<OctData::BScan> bscan = std::make_shared<OctData::BScan>(bscanImg, bscanData);
 
 		if(!imageAngio.empty())
 			bscan->setAngioImage(imageAngio);
@@ -119,9 +119,9 @@ namespace
 		{
 		    const mxArray* bscanNode = mxGetCell(bscansNode, i);
 
-			OctData::BScan* bscan = readBScan(bscanNode);
+			std::shared_ptr<OctData::BScan> bscan = readBScan(bscanNode);
 			if(bscan)
-				series.takeBScan(bscan);
+				series.addBScan(std::move(bscan));
 		}
 
 		return true;

@@ -353,6 +353,16 @@ public:
 		valueList.push_back(mat);
 	}
 
+	template<typename T>
+	void operator()(const std::string& name, std::vector<T>& value)
+	{
+		nameList.push_back(name);
+		mxArray* mat = nullptr;
+		createMatlabVector(value, mat);
+		valueList.push_back(mat);
+	}
+
+
 
 	ParameterToOptions subSet(const std::string& name)
 	{
